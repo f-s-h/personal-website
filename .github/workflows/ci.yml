@@ -1,0 +1,77 @@
+name: CI
+
+on:
+  pull_request:
+  workflow_dispatch:
+
+concurrency:
+  group: ci-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+jobs:
+
+  # ------------------------------------------------------------------
+  # Node / React web client
+  # ------------------------------------------------------------------
+  web-client:
+    name: web-client (Node)
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+
+    defaults:
+      run:
+        working-directory: web-client
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Node.js 20
+        uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+          cache: npm
+          cache-dependency-path: web-client/package-lock.json
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Typecheck (Typescript)
+        run: npx tsc --noEmit
+
+      - name: ESLint
+        run: npx eslint src --max-warnings=0
+
+      - name: Run tests
+        run: npm test -- --watchAll=false
+        env:
+          CI: true
+
+      - name: Build
+        run: npm run build
+
+  # ------------------------------------------------------------------
+  # Aggregate gate - use this single check for branch protection.
+  # ------------------------------------------------------------------
+  ci-success:
+    name: ci-success
+    runs-on: ubuntu-latest
+    if: always()
+    needs:
+      - web-client
+    steps:
+      - name: Verify all required jobs succeeded
+        run: |
+          results='${{ toJSON(needs) }}'
+          echo "Job results: $results"
+          if echo "$results" | jq -e '
+            to_entries[]
+            | select(.value.result == "failure" or .value.result == "cancelled")
+          ' > /dev/null; then
+            echo "::error::One or more required jobs did not succeed."
+            exit 1
+          fi
+
+          echo "All required jobs passed."
