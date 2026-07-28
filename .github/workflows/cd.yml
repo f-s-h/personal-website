@@ -1,0 +1,31 @@
+name: CD
+
+on:
+  push:
+    branches:
+      - web-client-init
+
+concurrency:
+  group: cd-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: false
+
+permissions:
+  contents: read
+
+jobs:
+
+  deploy:
+    name: Deploy to home server
+    runs-on: self-hosted
+    timeout-minutes: 20
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Write env file
+        working-directory: infra
+        run: echo "TUNNEL_TOKEN=${{ secrets.TUNNEL_TOKEN }}" > .env
+
+      - name: Build and deploy
+        working-directory: infra
+        run: docker compose up -d --build
