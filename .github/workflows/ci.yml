@@ -18,7 +18,7 @@ jobs:
   # ------------------------------------------------------------------
   web-client:
     name: web-client (Node)
-    runs-on: ubuntu-latest
+    runs-on: self-hosted
     timeout-minutes: 20
 
     defaults:
@@ -57,7 +57,7 @@ jobs:
   # ------------------------------------------------------------------
   ci-success:
     name: ci-success
-    runs-on: ubuntu-latest
+    runs-on: self-hosted
     if: always()
     needs:
       - web-client
