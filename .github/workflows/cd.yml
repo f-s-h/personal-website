@@ -3,7 +3,7 @@ name: CD
 on:
   push:
     branches:
-      - web-client-init
+      - main
 
 concurrency:
   group: cd-${{ github.workflow }}-${{ github.ref }}
